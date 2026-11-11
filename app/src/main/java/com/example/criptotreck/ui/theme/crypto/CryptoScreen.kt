@@ -1,7 +1,5 @@
 package com.example.criptotreck.ui.theme.crypto
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -46,8 +44,8 @@ fun CryptoScreen(viewModel: CryptoViewModel = remember { CryptoViewModel() }) {
 }
 
 @Composable
-fun CryptoCard(asset: CryptoAsset, onFavoriteClick: () -> Unit,
-               onClickCrypto:(CryptoAsset) -> Unit) {
+fun CryptoCard(asset: CryptoAsset, onFavoriteClick: () -> Unit,)
+               {
     Card(
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),

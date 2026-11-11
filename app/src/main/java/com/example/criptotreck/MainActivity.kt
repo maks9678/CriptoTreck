@@ -13,13 +13,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.criptotreck.ui.theme.CriptoTreckTheme
 import com.example.criptotreck.ui.theme.crypto.CryptoScreen
+import com.example.criptotreck.ui.theme.cryptoDetails.CryptoDetailsScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            CryptoScreen()
+            CryptoDetailsScreen()
         }
     }
 }
