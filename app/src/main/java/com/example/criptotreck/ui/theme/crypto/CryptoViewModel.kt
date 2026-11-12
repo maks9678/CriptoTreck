@@ -1,21 +1,30 @@
 package com.example.criptotreck.ui.theme.crypto
 
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.random.Random
+import kotlin.time.Duration.Companion.milliseconds
 
+@OptIn(FlowPreview::class)
 class CryptoViewModel(
     private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 ) {
     private val _uiState = MutableStateFlow<List<CryptoAsset>>(emptyList())
     val uiState: StateFlow<List<CryptoAsset>> = _uiState.asStateFlow()
+
+   val searchBarState = TextFieldState()
 
     init {
         // Инициализируем стартовый список
@@ -24,8 +33,13 @@ class CryptoViewModel(
             CryptoAsset("2", "Ethereum", "ETH", 3100.0, -0.8),
             CryptoAsset("3", "Solana", "SOL", 210.0, 5.4)
         )
-        // Запуск асинхронного "майнинга" / обновления цен
-        startLiveUpdates()
+        val uiState = combine(
+            uiState,
+            snapshotFlow{searchBarState.text.toString()}.debounce(300.milliseconds)
+        ){
+
+        }
+
     }
 
     private fun startLiveUpdates() {
