@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -12,6 +13,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -24,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.criptotreck.ui.theme.CriptoTreckTheme
 
 @Preview(showBackground = true)
@@ -34,33 +37,52 @@ fun GreetingPreview() {
     }
 }
 
+@Composable
+fun CryptoScreen() {
+    val viewModel: CryptoViewModel = viewModel()
+    val uiState by viewModel.uiState.collectAsState()
+    CryptoIternal(
+        uiState,
+        viewModel.searchBarState,
+        viewModel::toggleFavorite,
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CryptoScreen(viewModel: CryptoViewModel = remember { CryptoViewModel() }) {
-    // Подписываемся на асинхронный StateFlow из ViewModel
-    val assets by viewModel.uiState.collectAsState()
+fun CryptoIternal(
+    state: UiState,
+    searchBarState: TextFieldState,
+    onFavoriteClick: (String) -> Unit
+) {
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("CryptoLearn Dashboard") }) }
     ) { paddingValues ->
-        Column( modifier = Modifier
-            .padding(paddingValues)) {
-            OutlinedTextField(
-                viewModel.searchBarState,
+        if (state.isLoading) {
+            CircularProgressIndicator(Modifier.fillMaxSize().padding(paddingValues))
+        } else {
+            Column(
                 modifier = Modifier
-                    .padding(16.dp)
-            )
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(assets, key = { it.id }) { asset ->
-                    CryptoCard(
-                        asset = asset,
-                        onFavoriteClick = { viewModel.toggleFavorite(asset.id) })
+                OutlinedTextField(
+                    searchBarState,
+                    modifier = Modifier
+                        .padding(16.dp)
+                )
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(state.listCrypto, key = { it.id }) { asset ->
+                        CryptoCard(
+                            asset = asset,
+                            onFavoriteClick = { onFavoriteClick(asset.id) })
+                    }
                 }
             }
         }

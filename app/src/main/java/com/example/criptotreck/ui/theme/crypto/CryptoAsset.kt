@@ -6,5 +6,5 @@ data class CryptoAsset(
     val symbol: String,
     val currentPrice: Double,
     val priceChange24h: Double,
-    val isFavorite: Boolean = false
+    val isFavorite: Boolean = false,
 )
