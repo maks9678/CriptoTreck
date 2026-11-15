@@ -12,8 +12,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -45,6 +48,7 @@ fun CryptoScreen() {
         uiState,
         viewModel.searchBarState,
         viewModel::toggleFavorite,
+        viewModel::toggleLiveUpdate,
     )
 }
 
@@ -53,14 +57,42 @@ fun CryptoScreen() {
 fun CryptoIternal(
     state: UiState,
     searchBarState: TextFieldState,
-    onFavoriteClick: (String) -> Unit
+    onFavoriteClick: (String) -> Unit,
+    onToggleLive: () -> Unit,
 ) {
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("CryptoLearn Dashboard") }) }
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text("CryptoLearn Dashboard")
+                },
+                actions = {
+                    IconButton(onClick = onToggleLive) {
+                        Icon(
+                            imageVector =
+                                if (state.isLiveUpdateActive) {
+                                    Icons.Default.Pause
+                                } else {
+                                    Icons.Default.PlayArrow
+                                },
+                            contentDescription = if (state.isLiveUpdateActive) {
+                                "запустить обновление"
+                            } else {
+                                "остановить обновление"
+                            }
+                        )
+                    }
+                },
+            )
+        }
     ) { paddingValues ->
         if (state.isLoading) {
-            CircularProgressIndicator(Modifier.fillMaxSize().padding(paddingValues))
+            CircularProgressIndicator(
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            )
         } else {
             Column(
                 modifier = Modifier

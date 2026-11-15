@@ -4,16 +4,13 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.IO
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.stateIn
@@ -26,12 +23,15 @@ import kotlin.time.Duration.Companion.milliseconds
 data class UiState(
     val listCrypto: List<CryptoAsset> = emptyList(),
     val isLoading: Boolean = true,
-)
+    val isLiveUpdateActive: Boolean = true,
+
+    )
 
 @OptIn(FlowPreview::class)
 class CryptoViewModel(
 ) : ViewModel() {
     val searchBarState = TextFieldState()
+    private var priceUpdateJob: Job? = null
     private val _allCryptoState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = combine(
         _allCryptoState,
@@ -112,16 +112,14 @@ class CryptoViewModel(
     }
 
     private fun startLiveUpdates() {
-        // Запускаем корутину в viewModelScope.
-        // Она автоматически остановится, когда пользователь закроет экран.
-        viewModelScope.launch {
-
+        priceUpdateJob?.cancel()
+        priceUpdateJob = viewModelScope.launch {
             // Проверяем isActive вместо простого while(true),
             // чтобы цикл гарантированно прервался при отмене корутины.
             while (isActive) {
                 // Ждём 3 секунды перед следующим обновлением.
                 // delay не блокирует главный поток, экран продолжает плавно работать.
-                delay(2000)
+                delay(2000.milliseconds)
 
                 // Обновляем исходный список монет через потокобезопасный .update
                 _allCryptoState.update { currentState ->
@@ -140,6 +138,16 @@ class CryptoViewModel(
                     currentState.copy(listCrypto = updatedList)
                 }
             }
+        }
+    }
+
+    fun toggleLiveUpdate() {
+        if (_allCryptoState.value.isLiveUpdateActive) {
+            priceUpdateJob?.cancel()
+            _allCryptoState.update { it.copy(isLiveUpdateActive = false) }
+        } else {
+            _allCryptoState.update { it.copy(isLiveUpdateActive = true) }
+            startLiveUpdates()
         }
     }
 }
