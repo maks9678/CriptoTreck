@@ -1,0 +1,173 @@
+package com.example.criptotreck.ui.theme.News
+
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.runtime.snapshotFlow
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
+
+enum class CategoryNews(val title: String) {
+    BURSE("Рынок"),
+    DEFI("DeFi"),
+    SAFETY("Безопасность"),
+}
+
+data class News(
+    val idNews: String = "",
+    val titleText: String = "",
+    val descriptionText: String = "",
+    val categoryNews: CategoryNews? = null,
+    val timePublication: String = "",
+    val minutesAgo: Int = 0,
+)
+
+data class NewsState(
+    val briefcase: Double = 0.0,
+    val listNews: List<News> = emptyList(),
+    val selectedCategory: CategoryNews? = null,
+    val isLoading:Boolean = true,
+) {
+    fun filteredInSelectedCategory() = if (selectedCategory == null) {
+        listNews
+    } else {
+        listNews.filter { it.categoryNews == selectedCategory }
+    }
+}
+
+class NewsViewModel() : ViewModel() {
+    private var loadJob: Job? = null
+    private val _screenState = MutableStateFlow(NewsState())
+    val textField = TextFieldState()
+
+    val allNewsState: StateFlow<NewsState> = combine(
+        _screenState,
+        snapshotFlow { textField.text.toString() }.debounce(300.milliseconds)
+    ) { state, inputText ->
+        val categoryFiltered = state.filteredInSelectedCategory()
+        val filterList = if (inputText.isBlank()) {
+            categoryFiltered
+        } else {
+            categoryFiltered.filter { news ->
+                news.titleText.contains(inputText, ignoreCase = true) ||
+                        news.descriptionText.contains(inputText, ignoreCase = true)
+            }.sortedBy { it.minutesAgo }
+        }
+        state.copy(listNews = filterList)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = NewsState()
+    )
+
+    init {
+        refreshNews()
+    }
+
+    fun refreshNews() {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            val newYorkDeferred = async { loadNewYorkNewsList() }
+            val mockDeferred = async { loadMockNewsList() }
+            val londonDeferred = async { loadLondonNewsList() }
+
+            val mergeList = newYorkDeferred.await() + mockDeferred.await() + londonDeferred.await()
+            _screenState.update { it.copy(listNews = mergeList,
+                isLoading = false) }
+        }
+    }
+
+    fun onCategorySelected(category: CategoryNews?) {
+        _screenState.update { it.copy(selectedCategory = category) }
+    }
+}
+
+suspend fun updateDataScreen() {
+
+}
+
+suspend fun loadNewYorkNewsList(): List<News> {
+    delay(7000.milliseconds)
+    return listOf(
+        News(
+            titleText = "Ethereum готовится к крупному ралли",
+            descriptionText = "Торговые объемы ETH на спотовых биржах выросли на 40% за последние сутки.",
+            categoryNews = CategoryNews.BURSE,
+            timePublication = "35 мин. назад"
+
+        ),
+        News(
+            titleText = "Как защитить сид-фразу от вредоносного ПО",
+            descriptionText = "Разбираем лучшие практики хранения ключей и настройки аппаратных кошельков.",
+            categoryNews = CategoryNews.SAFETY,
+            timePublication = "6 часов назад"
+        ),
+
+        )
+}
+
+suspend fun loadLondonNewsList(): List<News> {
+    delay(2000.milliseconds)
+    return listOf(
+        News(
+            titleText = "Обнаружена уязвимость в популярном мосте",
+            descriptionText = "Разработчики вовремя остановили смарт-контракт и спасли миллионы долларов пользователей.",
+            categoryNews = CategoryNews.SAFETY,
+            timePublication = "3 часа назад"
+        ),
+
+        News(
+            titleText = "Solana обогнала конкурентов по объемам",
+            descriptionText = "Активность трейдеров в сети SOL бьет рекорды третью неделю подряд.",
+            categoryNews = CategoryNews.BURSE,
+            timePublication = "2 часа назад"
+        ),
+    )
+}
+
+suspend fun loadMockNewsList(): List<News> {
+    delay(5000.milliseconds)
+    return listOf(
+// --- РЫНОК (BURSE) ---
+        News(
+            titleText = "Биткоин обновил годовой максимум",
+            descriptionText = "Цена BTC уверенно закрепилась выше психологической отметки на фоне притока капитала.",
+            categoryNews = CategoryNews.BURSE,
+            timePublication = "5 мин. назад"
+        ),
+
+        News(
+            titleText = "Аналитики ждут снижения ставки ФРС",
+            descriptionText = "Макроэкономические показатели дают зеленый свет для роста рисковых активов и крипторынка.",
+            categoryNews = CategoryNews.BURSE,
+            timePublication = "5 часов назад"
+        ),
+
+// --- DEFI ---
+
+        News(
+            titleText = "Кредитный протокол Aave запускает новый пул",
+            descriptionText = "Теперь под залог стейблкоинов можно получить ликвидность с минимальным процентом.",
+            categoryNews = CategoryNews.DEFI,
+            timePublication = "4 часа назад"
+        ),
+
+// --- БЕЗОПАСНОСТЬ (SAFETY) ---
+        News(
+            titleText = "Новая волна фишинга через фейковые аирдропы",
+            descriptionText = "Эксперты предупреждают: не подписывайте подозрительные транзакции в своем кошельке.",
+            categoryNews = CategoryNews.SAFETY,
+            timePublication = "20 мин. назад"
+        ),
+    )
+}
