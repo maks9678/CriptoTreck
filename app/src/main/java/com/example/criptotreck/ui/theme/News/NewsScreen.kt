@@ -1,5 +1,7 @@
 package com.example.criptotreck.ui.theme.News
 
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,16 +32,21 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -50,6 +57,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.criptotreck.ui.theme.crypto.CryptoAsset
 import kotlinx.coroutines.NonCancellable.key
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 @Composable
 fun CategoryNews.getContainerColor(): Color {
@@ -68,7 +77,7 @@ fun NewsPreview() {
         {},
         {},
         CategoryNews.DEFI,
-        Portfolio(12.45,10.2),
+        Portfolio(12.45, 10.2),
         listOf(
             News(
                 titleText = "Ethereum готовится к крупному ралли",
@@ -83,7 +92,9 @@ fun NewsPreview() {
                 categoryNews = CategoryNews.SAFETY,
                 timePublication = "6 часов назад"
             ),
-        )
+        ),
+        true,
+        SnackbarHostState(),
     )
 }
 
@@ -92,7 +103,16 @@ fun NewsPreview() {
 fun NewsScreen() {
     val viewModel: NewsViewModel = viewModel()
     val state by viewModel.allNewsState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
 
+    LaunchedEffect(Unit) {
+        viewModel.errorChannel.collect { errorMessage ->
+            snackbarHostState.showSnackbar(
+                message = errorMessage,
+                actionLabel = "Ok"
+            )
+        }
+    }
     NewsScreenIternal(
         viewModel.textField,
         viewModel::onCategorySelected,
@@ -101,6 +121,7 @@ fun NewsScreen() {
         state.portfolio,
         state.listNews,
         state.isLoading,
+        snackbarHostState,
     )
 }
 
@@ -114,6 +135,7 @@ fun NewsScreenIternal(
     portfolio: Portfolio?,
     listNews: List<News>,
     isLoading: Boolean = false,
+    snackbarHostState: SnackbarHostState,
 ) {
     Scaffold(
         topBar = {
@@ -141,8 +163,9 @@ fun NewsScreenIternal(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
 
-        ) { paddingValues ->
+    ) { paddingValues ->
         Column {
             Row(
                 modifier = Modifier
@@ -151,9 +174,13 @@ fun NewsScreenIternal(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(0.dp)
             ) {
-                val signPercent = if((portfolio?.percent ?: 0.0)>=0)"+" else ""
-                Element(Modifier.weight(1f), "Портфель:", "$${portfolio?.cash ?:0.0}")
-                Element(Modifier.weight(1f), "Прибыль:", "$signPercent${portfolio?.percent ?: 0.0}%")
+                val signPercent = if ((portfolio?.percent ?: 0.0) >= 0) "+" else ""
+                Element(Modifier.weight(1f), "Портфель:", "$${portfolio?.cash ?: 0.0}")
+                Element(
+                    Modifier.weight(1f),
+                    "Прибыль:",
+                    "$signPercent${portfolio?.percent ?: 0.0}%"
+                )
             }
             OutlinedTextField(
                 state = searchBarState,
@@ -208,29 +235,29 @@ fun NewsScreenIternal(
                     ) {
                         CircularProgressIndicator()
                     }
+                } else if (listNews.isEmpty()) {
+                    Text(
+                        "Ничего не найдено",
+                        textAlign = TextAlign.Center
+                    )
                 } else {
-                    if (listNews.isEmpty()) {
-                        Text("Ничего не найдено",
-                            textAlign = TextAlign.Center)
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier
-                                .padding(24.dp)
-                                .fillMaxWidth(),
-                            verticalArrangement = Arrangement.SpaceBetween,
-                        ) {
-                            itemsIndexed(
-                                items = listNews,
-                                key = { _, news -> news.idNews })
-                            { index, news ->
-                                CardNews(news = news)
-                                if (index < listNews.lastIndex) {
-                                    HorizontalDivider(
-                                        modifier = Modifier.padding(horizontal = 16.dp),
-                                        thickness = 1.dp,
-                                        color = MaterialTheme.colorScheme.outlineVariant
-                                    )
-                                }
+                    LazyColumn(
+                        modifier = Modifier
+                            .padding(24.dp)
+                            .fillMaxWidth(),
+                        verticalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        itemsIndexed(
+                            items = listNews,
+                            key = { _, news -> news.idNews })
+                        { index, news ->
+                            CardNews(news = news)
+                            if (index < listNews.lastIndex) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    thickness = 1.dp,
+                                    color = MaterialTheme.colorScheme.outlineVariant
+                                )
                             }
                         }
                     }

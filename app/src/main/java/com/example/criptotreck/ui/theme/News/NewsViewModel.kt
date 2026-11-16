@@ -5,17 +5,22 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
+import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
 
 enum class CategoryNews(val title: String) {
@@ -52,6 +57,8 @@ data class NewsState(
 }
 
 class NewsViewModel() : ViewModel() {
+    private val _errorChannel = Channel<String>()
+    val errorChannel = _errorChannel.receiveAsFlow()
     private var loadJob: Job? = null
     private val _screenState = MutableStateFlow(NewsState())
     val textField = TextFieldState()
@@ -85,20 +92,35 @@ class NewsViewModel() : ViewModel() {
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
             _screenState.update { it.copy(isLoading = true) }
-            val newPortfolio = async{loadPortfolioStats()}
-            val newYorkDeferred = async { loadNewYorkNewsList() }
-            val mockDeferred = async { loadMockNewsList() }
-            val londonDeferred = async { loadLondonNewsList() }
 
-            val mergeList = newYorkDeferred.await() + mockDeferred.await() + londonDeferred.await()
-            val mergePortfolio = newPortfolio.await()
-            Log.i("NewsViewModel", "ответы получены")
-            _screenState.update {
-                it.copy(
-                    listNews = mergeList,
-                    portfolio = mergePortfolio,
-                    isLoading = false
-                )
+            supervisorScope {
+                val portfolioDeferred = async { loadPortfolioStats() }
+                val newYorkDeferred = async { loadNewYorkNewsList() }
+                val mockDeferred = async { loadMockNewsList() }
+                val londonDeferred = async { loadLondonNewsList() }
+                val nyNews = runCatching { newYorkDeferred.await() }
+                    .onFailure { if(it is CancellationException) throw it
+                        _errorChannel.send(it.message ?: "Ошибка загрузки Нью-Йорка") }
+                    .getOrDefault(emptyList())
+
+                val mockNews = runCatching { mockDeferred.await() }
+                    .getOrDefault(emptyList())
+
+                val londonNews = runCatching { londonDeferred.await() }
+                    .onFailure { _errorChannel.send(it.message ?: "Ошибка загрузки Лондона") }
+                    .getOrDefault(emptyList())
+
+                val mergeList = nyNews+mockNews+londonNews
+
+                val mergePortfolio = runCatching { portfolioDeferred.await() }.onFailure{_errorChannel.send("Не удалось загрузить баланс") }.getOrNull()
+                Log.i("NewsViewModel", "ответы получены")
+                _screenState.update {
+                    it.copy(
+                        listNews = mergeList,
+                        portfolio = mergePortfolio,
+                        isLoading = false
+                    )
+                }
             }
         }
     }
@@ -119,24 +141,26 @@ suspend fun loadPortfolioStats(): Portfolio {
 suspend fun loadNewYorkNewsList(): List<News> {
     delay(7000.milliseconds)
     Log.i("NewsViewModel", "loadNewYorkNewsList")
-    return listOf(
-        News(
-            idNews = "1",
-            titleText = "Ethereum готовится к крупному ралли",
-            descriptionText = "Торговые объемы ETH на спотовых биржах выросли на 40% за последние сутки.",
-            categoryNews = CategoryNews.BURSE,
-            timePublication = "35 мин. назад"
+    return if (Random.nextBoolean()) {
+        listOf(
+            News(
+                idNews = "1",
+                titleText = "Ethereum готовится к крупному ралли",
+                descriptionText = "Торговые объемы ETH на спотовых биржах выросли на 40% за последние сутки.",
+                categoryNews = CategoryNews.BURSE,
+                timePublication = "35 мин. назад"
 
-        ),
-        News(
-            idNews = "2",
-            titleText = "Как защитить сид-фразу от вредоносного ПО",
-            descriptionText = "Разбираем лучшие практики хранения ключей и настройки аппаратных кошельков.",
-            categoryNews = CategoryNews.SAFETY,
-            timePublication = "6 часов назад"
-        ),
+            ),
+            News(
+                idNews = "2",
+                titleText = "Как защитить сид-фразу от вредоносного ПО",
+                descriptionText = "Разбираем лучшие практики хранения ключей и настройки аппаратных кошельков.",
+                categoryNews = CategoryNews.SAFETY,
+                timePublication = "6 часов назад"
+            ),
 
-        )
+            )
+    } else throw Exception("Сервер нью-йорка времено не доступен")
 }
 
 suspend fun loadLondonNewsList(): List<News> {
