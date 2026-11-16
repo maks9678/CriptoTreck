@@ -1,5 +1,6 @@
 package com.example.criptotreck.ui.theme.News
 
+import android.util.Log
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
@@ -23,6 +24,11 @@ enum class CategoryNews(val title: String) {
     SAFETY("Безопасность"),
 }
 
+data class Portfolio(
+    val cash: Double = 0.0,
+    val percent: Double = 0.0,
+)
+
 data class News(
     val idNews: String = "",
     val titleText: String = "",
@@ -33,10 +39,10 @@ data class News(
 )
 
 data class NewsState(
-    val briefcase: Double = 0.0,
     val listNews: List<News> = emptyList(),
+    val portfolio: Portfolio? = null,
     val selectedCategory: CategoryNews? = null,
-    val isLoading:Boolean = true,
+    val isLoading: Boolean = true,
 ) {
     fun filteredInSelectedCategory() = if (selectedCategory == null) {
         listNews
@@ -61,8 +67,8 @@ class NewsViewModel() : ViewModel() {
             categoryFiltered.filter { news ->
                 news.titleText.contains(inputText, ignoreCase = true) ||
                         news.descriptionText.contains(inputText, ignoreCase = true)
-            }.sortedBy { it.minutesAgo }
-        }
+            }
+        }.sortedBy { it.minutesAgo }
         state.copy(listNews = filterList)
     }.stateIn(
         scope = viewModelScope,
@@ -75,15 +81,25 @@ class NewsViewModel() : ViewModel() {
     }
 
     fun refreshNews() {
+
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
+            _screenState.update { it.copy(isLoading = true) }
+            val newPortfolio = async{loadPortfolioStats()}
             val newYorkDeferred = async { loadNewYorkNewsList() }
             val mockDeferred = async { loadMockNewsList() }
             val londonDeferred = async { loadLondonNewsList() }
 
             val mergeList = newYorkDeferred.await() + mockDeferred.await() + londonDeferred.await()
-            _screenState.update { it.copy(listNews = mergeList,
-                isLoading = false) }
+            val mergePortfolio = newPortfolio.await()
+            Log.i("NewsViewModel", "ответы получены")
+            _screenState.update {
+                it.copy(
+                    listNews = mergeList,
+                    portfolio = mergePortfolio,
+                    isLoading = false
+                )
+            }
         }
     }
 
@@ -92,14 +108,20 @@ class NewsViewModel() : ViewModel() {
     }
 }
 
-suspend fun updateDataScreen() {
-
+suspend fun loadPortfolioStats(): Portfolio {
+    delay(3000.milliseconds)
+    return Portfolio(
+        45.23,
+        12.4
+    )
 }
 
 suspend fun loadNewYorkNewsList(): List<News> {
     delay(7000.milliseconds)
+    Log.i("NewsViewModel", "loadNewYorkNewsList")
     return listOf(
         News(
+            idNews = "1",
             titleText = "Ethereum готовится к крупному ралли",
             descriptionText = "Торговые объемы ETH на спотовых биржах выросли на 40% за последние сутки.",
             categoryNews = CategoryNews.BURSE,
@@ -107,6 +129,7 @@ suspend fun loadNewYorkNewsList(): List<News> {
 
         ),
         News(
+            idNews = "2",
             titleText = "Как защитить сид-фразу от вредоносного ПО",
             descriptionText = "Разбираем лучшие практики хранения ключей и настройки аппаратных кошельков.",
             categoryNews = CategoryNews.SAFETY,
@@ -118,8 +141,10 @@ suspend fun loadNewYorkNewsList(): List<News> {
 
 suspend fun loadLondonNewsList(): List<News> {
     delay(2000.milliseconds)
+    Log.i("NewsViewModel", "loadMockNewsList")
     return listOf(
         News(
+            idNews = "3",
             titleText = "Обнаружена уязвимость в популярном мосте",
             descriptionText = "Разработчики вовремя остановили смарт-контракт и спасли миллионы долларов пользователей.",
             categoryNews = CategoryNews.SAFETY,
@@ -127,6 +152,7 @@ suspend fun loadLondonNewsList(): List<News> {
         ),
 
         News(
+            idNews = "4",
             titleText = "Solana обогнала конкурентов по объемам",
             descriptionText = "Активность трейдеров в сети SOL бьет рекорды третью неделю подряд.",
             categoryNews = CategoryNews.BURSE,
@@ -137,9 +163,11 @@ suspend fun loadLondonNewsList(): List<News> {
 
 suspend fun loadMockNewsList(): List<News> {
     delay(5000.milliseconds)
+    Log.i("NewsViewModel", "loadMockNewsList")
     return listOf(
 // --- РЫНОК (BURSE) ---
         News(
+            idNews = "5",
             titleText = "Биткоин обновил годовой максимум",
             descriptionText = "Цена BTC уверенно закрепилась выше психологической отметки на фоне притока капитала.",
             categoryNews = CategoryNews.BURSE,
@@ -147,6 +175,7 @@ suspend fun loadMockNewsList(): List<News> {
         ),
 
         News(
+            idNews = "6",
             titleText = "Аналитики ждут снижения ставки ФРС",
             descriptionText = "Макроэкономические показатели дают зеленый свет для роста рисковых активов и крипторынка.",
             categoryNews = CategoryNews.BURSE,
@@ -156,6 +185,7 @@ suspend fun loadMockNewsList(): List<News> {
 // --- DEFI ---
 
         News(
+            idNews = "7",
             titleText = "Кредитный протокол Aave запускает новый пул",
             descriptionText = "Теперь под залог стейблкоинов можно получить ликвидность с минимальным процентом.",
             categoryNews = CategoryNews.DEFI,
@@ -164,6 +194,7 @@ suspend fun loadMockNewsList(): List<News> {
 
 // --- БЕЗОПАСНОСТЬ (SAFETY) ---
         News(
+            idNews = "8",
             titleText = "Новая волна фишинга через фейковые аирдропы",
             descriptionText = "Эксперты предупреждают: не подписывайте подозрительные транзакции в своем кошельке.",
             categoryNews = CategoryNews.SAFETY,
