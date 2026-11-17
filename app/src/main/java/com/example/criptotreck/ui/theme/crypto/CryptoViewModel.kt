@@ -150,4 +150,8 @@ class CryptoViewModel(
             startLiveUpdates()
         }
     }
+
+    fun onClickItemCrypto(id:String){
+
+    }
 }

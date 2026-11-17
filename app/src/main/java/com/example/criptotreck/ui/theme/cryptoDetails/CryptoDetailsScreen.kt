@@ -27,7 +27,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
-fun CryptoDetailsScreen() {
+fun CryptoDetailsScreen(idCrypto: String,
+                        onBackClick: () -> Unit) {
     val viewModel: CryptoDetailsViewModel = viewModel()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     CryptoDetailsIternal(

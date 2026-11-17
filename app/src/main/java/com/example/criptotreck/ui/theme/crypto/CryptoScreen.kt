@@ -49,6 +49,7 @@ fun CryptoScreen() {
         viewModel.searchBarState,
         viewModel::toggleFavorite,
         viewModel::toggleLiveUpdate,
+        viewModel::onClickItemCrypto,
     )
 }
 
@@ -59,6 +60,7 @@ fun CryptoIternal(
     searchBarState: TextFieldState,
     onFavoriteClick: (String) -> Unit,
     onToggleLive: () -> Unit,
+    onClickItemCrypto: (String) -> Unit,
 ) {
 
     Scaffold(
@@ -113,7 +115,9 @@ fun CryptoIternal(
                     items(state.listCrypto, key = { it.id }) { asset ->
                         CryptoCard(
                             asset = asset,
-                            onFavoriteClick = { onFavoriteClick(asset.id) })
+                            onFavoriteClick = { onFavoriteClick(asset.id) },
+                            onItemClick = {onClickItemCrypto(asset.id)}
+                        )
                     }
                 }
             }
@@ -122,11 +126,16 @@ fun CryptoIternal(
 }
 
 @Composable
-fun CryptoCard(asset: CryptoAsset, onFavoriteClick: () -> Unit) {
+fun CryptoCard(
+    asset: CryptoAsset,
+    onFavoriteClick: () -> Unit,
+    onItemClick: () -> Unit,
+) {
     Card(
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onItemClick
     ) {
         Row(
             modifier = Modifier

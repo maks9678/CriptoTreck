@@ -100,7 +100,7 @@ fun NewsPreview() {
 
 
 @Composable
-fun NewsScreen() {
+fun NewsScreen(onNewsClick: (String) -> Unit) {
     val viewModel: NewsViewModel = viewModel()
     val state by viewModel.allNewsState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -108,8 +108,7 @@ fun NewsScreen() {
     LaunchedEffect(Unit) {
         viewModel.errorChannel.collect { errorMessage ->
             snackbarHostState.showSnackbar(
-                message = errorMessage,
-                actionLabel = "Ok"
+                message = errorMessage, actionLabel = "Ok"
             )
         }
     }
@@ -137,33 +136,29 @@ fun NewsScreenIternal(
     isLoading: Boolean = false,
     snackbarHostState: SnackbarHostState,
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Аналитика и Новости",
-                        modifier = Modifier,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Medium,
-                    )
-                },
-                actions = {
-                    IconButton(
-                        modifier = Modifier
-                            .padding(0.dp),
-                        onClick = { onRefreshClick() },
-                        content = {
-                            Icon(
-                                imageVector = Icons.Default.RestartAlt,
-                                contentDescription = "Обновить"
-                            )
-                        }
-                    )
-                },
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+    Scaffold(topBar = {
+        TopAppBar(
+            title = {
+                Text(
+                    text = "Аналитика и Новости",
+                    modifier = Modifier,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+            },
+            actions = {
+                IconButton(
+                    modifier = Modifier.padding(0.dp),
+                    onClick = { onRefreshClick() },
+                    content = {
+                        Icon(
+                            imageVector = Icons.Default.RestartAlt,
+                            contentDescription = "Обновить"
+                        )
+                    })
+            },
+        )
+    }, snackbarHost = { SnackbarHost(snackbarHostState) }
 
     ) { paddingValues ->
         Column {
@@ -177,9 +172,7 @@ fun NewsScreenIternal(
                 val signPercent = if ((portfolio?.percent ?: 0.0) >= 0) "+" else ""
                 Element(Modifier.weight(1f), "Портфель:", "$${portfolio?.cash ?: 0.0}")
                 Element(
-                    Modifier.weight(1f),
-                    "Прибыль:",
-                    "$signPercent${portfolio?.percent ?: 0.0}%"
+                    Modifier.weight(1f), "Прибыль:", "$signPercent${portfolio?.percent ?: 0.0}%"
                 )
             }
             OutlinedTextField(
@@ -187,8 +180,7 @@ fun NewsScreenIternal(
                 modifier = Modifier.fillMaxWidth(),
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Поиск"
+                        imageVector = Icons.Default.Search, contentDescription = "Поиск"
                     )
                 },
                 placeholder = { Text("Поиск по новостям...") },
@@ -199,8 +191,7 @@ fun NewsScreenIternal(
                             Icon(Icons.Default.Clear, contentDescription = "Очистить")
                         }
                     }
-                }
-            )
+                })
             val categories = listOf(null) + CategoryNews.entries
             LazyRow(
                 modifier = Modifier
@@ -216,8 +207,7 @@ fun NewsScreenIternal(
                             Text(
                                 text = category?.title ?: "Все",
                             )
-                        }
-                    )
+                        })
                 }
 
             }
@@ -230,15 +220,13 @@ fun NewsScreenIternal(
             ) {
                 if (isLoading) {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator()
                     }
                 } else if (listNews.isEmpty()) {
                     Text(
-                        "Ничего не найдено",
-                        textAlign = TextAlign.Center
+                        "Ничего не найдено", textAlign = TextAlign.Center
                     )
                 } else {
                     LazyColumn(
@@ -248,9 +236,7 @@ fun NewsScreenIternal(
                         verticalArrangement = Arrangement.SpaceBetween,
                     ) {
                         itemsIndexed(
-                            items = listNews,
-                            key = { _, news -> news.idNews })
-                        { index, news ->
+                            items = listNews, key = { _, news -> news.idNews }) { index, news ->
                             CardNews(news = news)
                             if (index < listNews.lastIndex) {
                                 HorizontalDivider(
@@ -276,12 +262,10 @@ fun Element(
     Card(modifier = modifier.padding(12.dp)) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                textName,
-                fontWeight = FontWeight.Bold
+                textName, fontWeight = FontWeight.Bold
             )
             Text(
-                value,
-                fontWeight = FontWeight.Bold
+                value, fontWeight = FontWeight.Bold
             )
         }
     }
@@ -296,12 +280,10 @@ fun CardNews(news: News) {
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Text(
-            news.titleText,
-            fontWeight = FontWeight.Bold
+            news.titleText, fontWeight = FontWeight.Bold
         )
         Text(
-            news.descriptionText,
-            fontWeight = FontWeight.Light
+            news.descriptionText, fontWeight = FontWeight.Light
         )
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             news.categoryNews?.let { categoryNews ->
