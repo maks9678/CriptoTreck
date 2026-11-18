@@ -36,12 +36,14 @@ import com.example.criptotreck.ui.theme.CriptoTreckTheme
 @Composable
 fun GreetingPreview() {
     CriptoTreckTheme {
-        CryptoScreen()
+        CryptoScreen{}
     }
 }
 
 @Composable
-fun CryptoScreen() {
+fun CryptoScreen(
+    onCryptoClick: (String) -> Unit,
+) {
     val viewModel: CryptoViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsState()
     CryptoIternal(
@@ -49,7 +51,7 @@ fun CryptoScreen() {
         viewModel.searchBarState,
         viewModel::toggleFavorite,
         viewModel::toggleLiveUpdate,
-        viewModel::onClickItemCrypto,
+        onCryptoClick
     )
 }
 
@@ -60,7 +62,7 @@ fun CryptoIternal(
     searchBarState: TextFieldState,
     onFavoriteClick: (String) -> Unit,
     onToggleLive: () -> Unit,
-    onClickItemCrypto: (String) -> Unit,
+    onClickItemCrypto:(String)-> Unit,
 ) {
 
     Scaffold(
@@ -116,7 +118,7 @@ fun CryptoIternal(
                         CryptoCard(
                             asset = asset,
                             onFavoriteClick = { onFavoriteClick(asset.id) },
-                            onItemClick = {onClickItemCrypto(asset.id)}
+                            onItemClick = { onClickItemCrypto(asset.id) }
                         )
                     }
                 }

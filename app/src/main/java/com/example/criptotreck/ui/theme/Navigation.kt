@@ -6,6 +6,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 object NewsListRoute
 @Serializable
-object MarketRoute
+object CryptoRoute
 @Serializable
-data class NewsDetailRoute(val id:String)
+data class CryptoDetailRoute(
+    val id:String
+)

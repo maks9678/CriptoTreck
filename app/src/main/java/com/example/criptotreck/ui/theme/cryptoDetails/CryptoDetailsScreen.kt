@@ -1,5 +1,4 @@
 package com.example.criptotreck.ui.theme.cryptoDetails
-
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,6 +15,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,11 +30,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 fun CryptoDetailsScreen(idCrypto: String,
                         onBackClick: () -> Unit) {
     val viewModel: CryptoDetailsViewModel = viewModel()
+    LaunchedEffect(idCrypto) {
+        viewModel.loadCryptoById(idCrypto)
+    }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     CryptoDetailsIternal(
         state,
         viewModel::mineCrypto,
-        {},
+        onBackClick,
 
     )
 
@@ -48,7 +51,7 @@ fun CryptoDetailsIternal(
     onBackClick: () -> Unit,
 ) {
     Scaffold(
-        topBar = { TopAppBar(title = { Text("${assets.cryptoAsset.name}") },
+        topBar = { TopAppBar(title = { Text(assets.cryptoAsset.name) },
             navigationIcon = { IconButton(onBackClick){ Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Назад"

@@ -4,32 +4,30 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButtonDefaults.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
-import androidx.navigation.NavHost
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.example.criptotreck.ui.theme.CriptoTreckTheme
-import com.example.criptotreck.ui.theme.MarketRoute
+import com.example.criptotreck.ui.theme.CryptoRoute
 import com.example.criptotreck.ui.theme.News.NewsScreen
-import com.example.criptotreck.ui.theme.NewsDetailRoute
+import com.example.criptotreck.ui.theme.CryptoDetailRoute
 import com.example.criptotreck.ui.theme.NewsListRoute
 import com.example.criptotreck.ui.theme.crypto.CryptoScreen
 import com.example.criptotreck.ui.theme.cryptoDetails.CryptoDetailsScreen
@@ -59,13 +57,13 @@ class MainActivity : ComponentActivity() {
                             label = { Text("Новости") }
                         )
                         NavigationBarItem(
-                            selected = currentDestination?.hasRoute<MarketRoute>() == true,
+                            selected = currentDestination?.hasRoute<CryptoRoute>() == true,
                             onClick = {
-                                navController.navigate(MarketRoute) {
+                                navController.navigate(CryptoRoute) {
                                     launchSingleTop = true
                                 }
                             },
-                            icon = { Icon(Icons.Default.ShowChart, contentDescription = "Рынок") },
+                            icon = { Icon(Icons.AutoMirrored.Filled.ShowChart, contentDescription = "Рынок") },
                             label = { Text("Рынок") }
                         )
                     }
@@ -78,23 +76,27 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.padding(paddingValues)
                 ) {
                     composable<NewsListRoute> {
-                        NewsScreen(
-                            onNewsClick = { clickedNewsId ->
-                                navController.navigate(NewsDetailRoute(id = clickedNewsId))
+                        NewsScreen()
+                    }
+                    composable<CryptoRoute> {
+                        CryptoScreen(
+                            onCryptoClick = { id ->
+                                navController.navigate(
+                                    CryptoDetailRoute(
+                                        id
+                                    )
+                                )
                             }
                         )
                     }
-                    composable<MarketRoute> {
-                        NewsScreen(onNewsClick = {})
-                    }
-                    composable<NewsDetailRoute> { backStackEntry ->
+                    composable<CryptoDetailRoute> { backStackEntry ->
                         // Достаем переданный объект с аргументами
-                        val route: NewsDetailRoute = backStackEntry.toRoute()
+                        val route: CryptoDetailRoute = backStackEntry.toRoute()
 
                         CryptoDetailsScreen(
                             idCrypto = route.id,
                             onBackClick = {
-                                // Возврат на предыдущий экран
+                                if(backStackEntry.lifecycle.currentState == Lifecycle.State.RESUMED)
                                 navController.popBackStack()
                             })
                     }
@@ -111,6 +113,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun GreetingPreview() {
     CriptoTreckTheme {
-        CryptoScreen()
+        CryptoScreen{}
+
     }
 }
