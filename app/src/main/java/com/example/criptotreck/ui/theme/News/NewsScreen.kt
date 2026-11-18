@@ -1,7 +1,5 @@
 package com.example.criptotreck.ui.theme.News
 
-import android.content.Context
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -40,14 +37,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -55,10 +48,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.criptotreck.ui.theme.crypto.CryptoAsset
-import kotlinx.coroutines.NonCancellable.key
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
 
 @Composable
 fun CategoryNews.getContainerColor(): Color {
@@ -108,8 +97,7 @@ fun NewsScreen() {
     LaunchedEffect(Unit) {
         viewModel.errorChannel.collect { errorMessage ->
             snackbarHostState.showSnackbar(
-                message = errorMessage,
-                actionLabel = "Ok"
+                message = errorMessage, actionLabel = "Ok"
             )
         }
     }
@@ -137,33 +125,29 @@ fun NewsScreenIternal(
     isLoading: Boolean = false,
     snackbarHostState: SnackbarHostState,
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Аналитика и Новости",
-                        modifier = Modifier,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Medium,
-                    )
-                },
-                actions = {
-                    IconButton(
-                        modifier = Modifier
-                            .padding(0.dp),
-                        onClick = { onRefreshClick() },
-                        content = {
-                            Icon(
-                                imageVector = Icons.Default.RestartAlt,
-                                contentDescription = "Обновить"
-                            )
-                        }
-                    )
-                },
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+    Scaffold(topBar = {
+        TopAppBar(
+            title = {
+                Text(
+                    text = "Аналитика и Новости",
+                    modifier = Modifier,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+            },
+            actions = {
+                IconButton(
+                    modifier = Modifier.padding(0.dp),
+                    onClick = { onRefreshClick() },
+                    content = {
+                        Icon(
+                            imageVector = Icons.Default.RestartAlt,
+                            contentDescription = "Обновить"
+                        )
+                    })
+            },
+        )
+    }, snackbarHost = { SnackbarHost(snackbarHostState) }
 
     ) { paddingValues ->
         Column {
@@ -177,9 +161,7 @@ fun NewsScreenIternal(
                 val signPercent = if ((portfolio?.percent ?: 0.0) >= 0) "+" else ""
                 Element(Modifier.weight(1f), "Портфель:", "$${portfolio?.cash ?: 0.0}")
                 Element(
-                    Modifier.weight(1f),
-                    "Прибыль:",
-                    "$signPercent${portfolio?.percent ?: 0.0}%"
+                    Modifier.weight(1f), "Прибыль:", "$signPercent${portfolio?.percent ?: 0.0}%"
                 )
             }
             OutlinedTextField(
@@ -187,8 +169,7 @@ fun NewsScreenIternal(
                 modifier = Modifier.fillMaxWidth(),
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Поиск"
+                        imageVector = Icons.Default.Search, contentDescription = "Поиск"
                     )
                 },
                 placeholder = { Text("Поиск по новостям...") },
@@ -199,8 +180,7 @@ fun NewsScreenIternal(
                             Icon(Icons.Default.Clear, contentDescription = "Очистить")
                         }
                     }
-                }
-            )
+                })
             val categories = listOf(null) + CategoryNews.entries
             LazyRow(
                 modifier = Modifier
@@ -216,8 +196,7 @@ fun NewsScreenIternal(
                             Text(
                                 text = category?.title ?: "Все",
                             )
-                        }
-                    )
+                        })
                 }
 
             }
@@ -230,15 +209,13 @@ fun NewsScreenIternal(
             ) {
                 if (isLoading) {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator()
                     }
                 } else if (listNews.isEmpty()) {
                     Text(
-                        "Ничего не найдено",
-                        textAlign = TextAlign.Center
+                        "Ничего не найдено", textAlign = TextAlign.Center
                     )
                 } else {
                     LazyColumn(
@@ -248,9 +225,7 @@ fun NewsScreenIternal(
                         verticalArrangement = Arrangement.SpaceBetween,
                     ) {
                         itemsIndexed(
-                            items = listNews,
-                            key = { _, news -> news.idNews })
-                        { index, news ->
+                            items = listNews, key = { _, news -> news.idNews }) { index, news ->
                             CardNews(news = news)
                             if (index < listNews.lastIndex) {
                                 HorizontalDivider(
@@ -276,12 +251,10 @@ fun Element(
     Card(modifier = modifier.padding(12.dp)) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                textName,
-                fontWeight = FontWeight.Bold
+                textName, fontWeight = FontWeight.Bold
             )
             Text(
-                value,
-                fontWeight = FontWeight.Bold
+                value, fontWeight = FontWeight.Bold
             )
         }
     }
@@ -296,12 +269,10 @@ fun CardNews(news: News) {
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Text(
-            news.titleText,
-            fontWeight = FontWeight.Bold
+            news.titleText, fontWeight = FontWeight.Bold
         )
         Text(
-            news.descriptionText,
-            fontWeight = FontWeight.Light
+            news.descriptionText, fontWeight = FontWeight.Light
         )
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             news.categoryNews?.let { categoryNews ->

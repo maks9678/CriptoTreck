@@ -28,8 +28,7 @@ data class UiState(
     )
 
 @OptIn(FlowPreview::class)
-class CryptoViewModel(
-) : ViewModel() {
+class CryptoViewModel : ViewModel() {
     val searchBarState = TextFieldState()
     private var priceUpdateJob: Job? = null
     private val _allCryptoState = MutableStateFlow(UiState())
@@ -97,12 +96,8 @@ class CryptoViewModel(
 
     suspend fun loadMarketCoins(): List<CryptoAsset> {
         delay(2000.milliseconds)
-        val listCrypto = listOf(
-            CryptoAsset("1", "Bitcoin", "BTC", 92000.0, 2.5),
-            CryptoAsset("2", "Ethereum", "ETH", 3100.0, -3.8),
-            CryptoAsset("3", "Solana", "SOL", 210.0, 5.4)
-        )
-        return listCrypto
+
+        return ListCrypto.initialCryptoList
 
     }
 
@@ -149,5 +144,15 @@ class CryptoViewModel(
             _allCryptoState.update { it.copy(isLiveUpdateActive = true) }
             startLiveUpdates()
         }
+    }
+}
+object ListCrypto {
+    val initialCryptoList = listOf(
+    CryptoAsset("1", "Bitcoin", "BTC", 92000.0, 2.5),
+    CryptoAsset("2", "Ethereum", "ETH", 3100.0, -3.8),
+    CryptoAsset("3", "Solana", "SOL", 210.0, 5.4))
+
+    fun getCryptoById(id:String): CryptoAsset?{
+        return initialCryptoList.find{it.id == id}
     }
 }
