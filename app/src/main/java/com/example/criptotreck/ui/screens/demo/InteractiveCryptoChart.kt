@@ -117,12 +117,14 @@ enum class TimeFrame(val label: String, val pointCount: Int) {
 
 /**
  * Генератор реалистичных тестовых данных для криптовалютного графика (совместим с Android API 24+)
+ * с поддержкой привязки к базовой цене конкретного актива.
  */
 object ChartDataGenerator {
-    fun generateData(timeFrame: TimeFrame): List<ChartPoint> {
+    fun generateData(timeFrame: TimeFrame, basePrice: Float = 92000f): List<ChartPoint> {
         val points = mutableListOf<ChartPoint>()
-        var currentPrice = 92000f + Random.nextFloat() * 2000f
-        val random = Random(timeFrame.ordinal * 42)
+        // Корректируем стартовую цену так, чтобы последняя точка была близка к переданной basePrice
+        var currentPrice = max(0.00001f, basePrice * (1f - ((timeFrame.pointCount / 2f) * 0.002f)))
+        val random = Random(timeFrame.ordinal * 42 + basePrice.toInt())
 
         val calendar = Calendar.getInstance()
         val hourFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
@@ -138,12 +140,12 @@ object ChartDataGenerator {
         val startTime = System.currentTimeMillis() - (timeFrame.pointCount * stepMillis)
 
         for (i in 0 until timeFrame.pointCount) {
-            val deltaPercent = (random.nextFloat() - 0.48f) * 0.035f
+            val deltaPercent = (random.nextFloat() - 0.485f) * 0.03f
             val open = currentPrice
-            val close = open * (1f + deltaPercent)
-            val spread = open * (0.005f + random.nextFloat() * 0.015f)
+            val close = if (i == timeFrame.pointCount - 1) basePrice else open * (1f + deltaPercent)
+            val spread = open * (0.003f + random.nextFloat() * 0.012f)
             val high = max(open, close) + spread * random.nextFloat()
-            val low = min(open, close) - spread * random.nextFloat()
+            val low = max(0.00001f, min(open, close) - spread * random.nextFloat())
             val volume = 1500f + random.nextFloat() * 8500f
             currentPrice = close
 
@@ -180,23 +182,52 @@ object ChartDataGenerator {
 }
 
 /**
- * Сложный интерактивный компоузабл графика криптовалюты:
+ * Сложный интерактивный компоузабл графика криптовалюты, адаптированный под конкретный актив (coinSymbol, basePrice):
  * 1. Обработка касаний и жестов (pointerInput: перетаскивание прицела, масштабирование 2 пальцами, сдвиг)
- * 2. Управление состояниями анимаций (анимация отрисовки линии Animatable, пульсация активной точки, переключение таймфреймов)
+ * 2. Управление состояниями анимаций (анимация прорисовки линии Animatable, пульсация активной точки, переключение таймфреймов)
  * 3. Кастомная отрисовка Canvas (сглаженная кривая Безье, градиентная заливка, японские свечи, гистограмма объёмов, MA20, перекрестье с тактильным откликом)
  */
 @Composable
 fun InteractiveCryptoChartScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    coinSymbol: String = "BTC",
+    basePrice: Float = 92000f,
+    initialPriceChange: Float = 2.5f
 ) {
     var selectedTimeFrame by remember { mutableStateOf(TimeFrame.WEEK_1) }
     var chartType by remember { mutableStateOf(ChartType.LINE) }
     var showMA20 by remember { mutableStateOf(true) }
     var showVolume by remember { mutableStateOf(true) }
 
-    // Данные графика в зависимости от выбранного интервала
-    var chartData by remember(selectedTimeFrame) {
-        mutableStateOf(ChartDataGenerator.generateData(selectedTimeFrame))
+    // Данные графика с учетом базовой цены конкретной монеты
+    var chartData by remember(selectedTimeFrame, coinSymbol) {
+        mutableStateOf(ChartDataGenerator.generateData(selectedTimeFrame, basePrice))
+    }
+
+    // Скользящее окно в реальном времени при изменении цены (добавление новой точки справа, удаление старой слева)
+    LaunchedEffect(basePrice) {
+        if (chartData.isNotEmpty()) {
+            val lastPoint = chartData.last()
+            if (kotlin.math.abs(lastPoint.close - basePrice) > 0.00001f) {
+                val newTimeIndex = lastPoint.timestampIndex + 1
+                val spread = basePrice * 0.004f
+                val newPoint = ChartPoint(
+                    timestampIndex = newTimeIndex,
+                    open = lastPoint.close,
+                    high = max(lastPoint.close, basePrice) + spread * Random.nextFloat(),
+                    low = max(0.00001f, min(lastPoint.close, basePrice) - spread * Random.nextFloat()),
+                    close = basePrice,
+                    volume = 1000f + Random.nextFloat() * 4000f,
+                    dateLabel = "Live"
+                )
+                val updatedList = chartData.drop(1) + newPoint
+                chartData = updatedList.mapIndexed { index, pt ->
+                    val startIndex = max(0, index - 19)
+                    val ma = updatedList.subList(startIndex, index + 1).map { it.close }.average().toFloat()
+                    pt.copy(ma20 = ma)
+                }
+            }
+        }
     }
 
     // Интерактивное состояние (выбранная точка при касании, масштаб, сдвиг)
@@ -204,16 +235,16 @@ fun InteractiveCryptoChartScreen(
     var zoomScale by remember { mutableFloatStateOf(1.0f) }
     var panOffset by remember { mutableFloatStateOf(0.0f) }
 
-    // Состояние анимации прорисовки линии при смене данных
-    val animatableProgress = remember { Animatable(0f) }
+    // Состояние анимации прорисовки линии при смене данных (по умолчанию 1f, чтобы лайв-обновления не дергали анимацию)
+    val animatableProgress = remember { Animatable(1f) }
     val scope = rememberCoroutineScope()
 
-    // Запуск анимации прорисовки при переключении интервала
-    LaunchedEffect(selectedTimeFrame) {
+    // Запуск анимации прорисовки ТОЛЬКО при переключении интервала или монеты
+    LaunchedEffect(selectedTimeFrame, coinSymbol) {
         animatableProgress.snapTo(0f)
         animatableProgress.animateTo(
             targetValue = 1f,
-            animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing)
+            animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing)
         )
     }
 
@@ -222,9 +253,9 @@ fun InteractiveCryptoChartScreen(
     } ?: chartData.lastOrNull()
 
     val firstPoint = chartData.firstOrNull() ?: ChartPoint(0, 0f, 0f, 0f, 0f, 0f, "")
-    val priceChange = (currentPoint?.close ?: 0f) - firstPoint.open
-    val priceChangePercent = if (firstPoint.open != 0f) (priceChange / firstPoint.open) * 100f else 0f
-    val isPositive = priceChange >= 0
+    val priceChange = (currentPoint?.close ?: basePrice) - firstPoint.open
+    val priceChangePercent = if (firstPoint.open != 0f) (priceChange / firstPoint.open) * 100f else initialPriceChange
+    val isPositive = priceChangePercent >= 0
 
     Column(
         modifier = modifier
@@ -235,11 +266,12 @@ fun InteractiveCryptoChartScreen(
     ) {
         // --- Шапка: Курс в реальном времени и процент изменения ---
         ChartHeaderSection(
+            coinSymbol = coinSymbol,
             currentPoint = currentPoint,
             priceChangePercent = priceChangePercent,
             isPositive = isPositive,
             onRefresh = {
-                chartData = ChartDataGenerator.generateData(selectedTimeFrame)
+                chartData = ChartDataGenerator.generateData(selectedTimeFrame, basePrice)
                 scope.launch {
                     animatableProgress.snapTo(0f)
                     animatableProgress.animateTo(1f, tween(800))
@@ -319,7 +351,7 @@ fun InteractiveCryptoChartScreen(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Удерживайте и ведите пальцем • Жест 2 пальцами для масштаба",
+                            text = "Удерживайте палец • Pinch-zoom для масштаба",
                             style = MaterialTheme.typography.labelSmall,
                             fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -343,14 +375,20 @@ fun InteractiveCryptoChartScreen(
  */
 @Composable
 private fun ChartHeaderSection(
+    coinSymbol: String,
     currentPoint: ChartPoint?,
     priceChangePercent: Float,
     isPositive: Boolean,
     onRefresh: () -> Unit
 ) {
+    val priceValue = currentPoint?.close ?: 0f
     val currencyFormatter = remember { NumberFormat.getCurrencyInstance(Locale.US) }
-    val formattedPrice = remember(currentPoint?.close) {
-        currencyFormatter.format(currentPoint?.close ?: 0.0)
+    val formattedPrice = remember(priceValue) {
+        if (priceValue < 1f) {
+            "$${String.format(Locale.US, "%.5f", priceValue)}"
+        } else {
+            currencyFormatter.format(priceValue.toDouble())
+        }
     }
 
     val changeColor = if (isPositive) Color(0xFF00C853) else Color(0xFFFF3D00)
@@ -363,7 +401,7 @@ private fun ChartHeaderSection(
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "Bitcoin / USDT",
+                    text = "$coinSymbol / USDT",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -375,7 +413,7 @@ private fun ChartHeaderSection(
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        text = "BTC",
+                        text = coinSymbol,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         fontWeight = FontWeight.Bold
@@ -602,7 +640,7 @@ private fun ChartCanvas(
 
         val minPrice = data.minOf { it.low }
         val maxPrice = data.maxOf { it.high }
-        val priceRange = max(1f, maxPrice - minPrice)
+        val priceRange = max(0.00001f, maxPrice - minPrice)
 
         val maxVolume = data.maxOf { it.volume }
 
@@ -724,8 +762,8 @@ private fun ChartCanvas(
                 )
 
                 // Плашка с точной ценой на оси Y справа
-                val priceText = String.format(Locale.US, "$%.2f", selectedPoint.close)
-                val badgeWidth = 95f
+                val priceText = if (selectedPoint.close < 1f) String.format(Locale.US, "$%.5f", selectedPoint.close) else String.format(Locale.US, "$%.2f", selectedPoint.close)
+                val badgeWidth = 100f
                 val badgeHeight = 26f
                 val badgeLeft = chartWidth + 6f
                 val badgeTop = (crosshairY - badgeHeight / 2f).coerceIn(0f, chartHeight - badgeHeight)
@@ -764,10 +802,7 @@ private fun calculateClosestPointIndex(
 ): Int {
     if (dataSize <= 1 || chartWidth <= 0f) return 0
 
-    // 1. Учитываем обратную трансформацию панорамирования (panOffset) и масштаба (zoomScale)
     val unscaledX = (touchX - panOffset - chartWidth / 2f) / zoomScale + chartWidth / 2f
-
-    // 2. Рассчитываем индекс с округлением до ближайшей точки
     val step = chartWidth / (dataSize - 1)
     val index = kotlin.math.round(unscaledX / step).toInt()
     return index.coerceIn(0, dataSize - 1)
@@ -784,13 +819,13 @@ private fun DrawScope.drawGridAndYAxis(
     textMeasurer: androidx.compose.ui.text.TextMeasurer
 ) {
     val gridLinesCount = 5
-    val priceStep = (maxPrice - minPrice) / (gridLinesCount - 1)
+    val priceRange = max(0.00001f, maxPrice - minPrice)
+    val priceStep = priceRange / (gridLinesCount - 1)
 
     for (i in 0 until gridLinesCount) {
         val y = chartHeight - (i * (chartHeight / (gridLinesCount - 1)))
         val price = minPrice + (i * priceStep)
 
-        // Линия сетки
         drawLine(
             color = Color.Gray.copy(alpha = 0.15f),
             start = Offset(0f, y),
@@ -798,8 +833,7 @@ private fun DrawScope.drawGridAndYAxis(
             strokeWidth = 1f
         )
 
-        // Метка цены на правой оси
-        val labelText = String.format(Locale.US, "$%.0f", price)
+        val labelText = if (price < 1f) String.format(Locale.US, "$%.4f", price) else String.format(Locale.US, "$%.0f", price)
         drawText(
             textMeasurer = textMeasurer,
             text = labelText,
@@ -841,7 +875,6 @@ private fun DrawScope.drawLineChart(
         val p2X = getX(i + 1)
         val p2Y = getY(data[i + 1].close)
 
-        // Расчёт контрольных точек для сглаживания кубической кривой Безье
         val cx1 = p1X + (p2X - p1X) / 2f
         val cx2 = p1X + (p2X - p1X) / 2f
 
@@ -856,9 +889,7 @@ private fun DrawScope.drawLineChart(
     val isUp = data.last().close >= data.first().close
     val primaryColor = if (isUp) Color(0xFF00E676) else Color(0xFFFF3D00)
 
-    // Обрезка области рисунка согласно прогрессу анимации прорисовки
     clipRect(right = chartWidth * animationProgress) {
-        // Градиентная заливка под графиком
         drawPath(
             path = fillPath,
             brush = Brush.verticalGradient(
@@ -871,7 +902,6 @@ private fun DrawScope.drawLineChart(
             )
         )
 
-        // Основная линия графика
         drawPath(
             path = linePath,
             color = primaryColor,
@@ -903,7 +933,6 @@ private fun DrawScope.drawCandlesticks(
             val isBullish = point.close >= point.open
             val color = if (isBullish) Color(0xFF00C853) else Color(0xFFFF3D00)
 
-            // Фитиль свечи
             drawLine(
                 color = color,
                 start = Offset(x, highY),
@@ -911,7 +940,6 @@ private fun DrawScope.drawCandlesticks(
                 strokeWidth = 1.5f
             )
 
-            // Тело свечи
             val topY = min(openY, closeY)
             val bottomY = max(openY, closeY)
             val bodyHeight = max(2f, bottomY - topY)
@@ -1042,7 +1070,7 @@ private fun ScrubberDetailsFooter(
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = if (isScrubbing) "Выбранная точка (${selectedPoint.dateLabel}):" else "Текущее состояние:",
+                        text = if (isScrubbing) "Точка (${selectedPoint.dateLabel}):" else "Текущие данные:",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1051,10 +1079,10 @@ private fun ScrubberDetailsFooter(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    DetailItem(label = "Откр", value = String.format(Locale.US, "$%.2f", selectedPoint.open))
-                    DetailItem(label = "Макс", value = String.format(Locale.US, "$%.2f", selectedPoint.high))
-                    DetailItem(label = "Мин", value = String.format(Locale.US, "$%.2f", selectedPoint.low))
-                    DetailItem(label = "Закр", value = String.format(Locale.US, "$%.2f", selectedPoint.close))
+                    DetailItem(label = "Откр", value = if (selectedPoint.open < 1f) String.format(Locale.US, "$%.4f", selectedPoint.open) else String.format(Locale.US, "$%.2f", selectedPoint.open))
+                    DetailItem(label = "Макс", value = if (selectedPoint.high < 1f) String.format(Locale.US, "$%.4f", selectedPoint.high) else String.format(Locale.US, "$%.2f", selectedPoint.high))
+                    DetailItem(label = "Мин", value = if (selectedPoint.low < 1f) String.format(Locale.US, "$%.4f", selectedPoint.low) else String.format(Locale.US, "$%.2f", selectedPoint.low))
+                    DetailItem(label = "Закр", value = if (selectedPoint.close < 1f) String.format(Locale.US, "$%.4f", selectedPoint.close) else String.format(Locale.US, "$%.2f", selectedPoint.close))
                     DetailItem(label = "Объём", value = String.format(Locale.US, "%.0f", selectedPoint.volume))
                 }
             }

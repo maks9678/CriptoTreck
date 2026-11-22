@@ -34,6 +34,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -122,10 +123,13 @@ fun NewsScreenIternal(
                 title = {
                     Text(
                         text = "Аналитика и Новости",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Medium
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
                 actions = {
                     IconButton(
                         onClick = { onRefreshClick() },
