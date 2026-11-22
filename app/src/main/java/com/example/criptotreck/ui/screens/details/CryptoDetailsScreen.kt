@@ -1,4 +1,5 @@
-package com.example.criptotreck.ui.theme.cryptoDetails
+package com.example.criptotreck.ui.screens.details
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,10 +26,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.criptotreck.ui.components.MiningControlButton
 
 @Composable
-fun CryptoDetailsScreen(idCrypto: String,
-                        onBackClick: () -> Unit) {
+fun CryptoDetailsScreen(
+    idCrypto: String,
+    onBackClick: () -> Unit
+) {
     val viewModel: CryptoDetailsViewModel = viewModel()
     LaunchedEffect(idCrypto) {
         viewModel.loadCryptoById(idCrypto)
@@ -37,30 +41,37 @@ fun CryptoDetailsScreen(idCrypto: String,
     CryptoDetailsIternal(
         state,
         viewModel::mineCrypto,
-        onBackClick,
-
+        onBackClick
     )
-
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CryptoDetailsIternal(
-    assets:CryptoDetailsState,
-    mineCurrency : () -> Unit,
+    assets: CryptoDetailsState,
+    mineCurrency: () -> Unit,
     onBackClick: () -> Unit,
 ) {
-    Scaffold(
-        topBar = { TopAppBar(title = { Text(assets.cryptoAsset.name) },
-            navigationIcon = { IconButton(onBackClick){ Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Назад"
-            )} }
-        ) }
-
-    ) { paddingValues ->
+    assets.cryptoAsset?.let { asset ->
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(asset.name) },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Назад"
+                            )
+                        }
+                    }
+                )
+            }
+        ) { paddingValues ->
             Column(
-                modifier = Modifier.fillMaxSize().padding(paddingValues),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Row(
@@ -69,19 +80,22 @@ fun CryptoDetailsIternal(
                 ) {
                     Text("${assets.currentBalance}", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                     Spacer(modifier = Modifier.padding(horizontal = 2.dp))
-                    Text(assets.cryptoAsset.symbol, color = Color.Gray, fontSize = 14.sp)
+                    Text(asset.symbol, color = Color.Gray, fontSize = 14.sp)
                 }
                 Spacer(modifier = Modifier.padding(vertical = 8.dp))
-                Text("${assets.cryptoAsset.currentPrice}", color = Color.Gray, fontSize = 14.sp)
-                Text("${assets.cryptoAsset.priceChange24h}", color = Color.Gray, fontSize = 14.sp)
+                Text("${asset.currentPrice}", color = Color.Gray, fontSize = 14.sp)
+                Text("${asset.priceChange24h}", color = Color.Gray, fontSize = 14.sp)
                 Spacer(modifier = Modifier.padding(vertical = 8.dp))
+
+                MiningControlButton(coinTicker = asset.symbol)
                 Button(
-                    onClick = mineCurrency ,
+                    onClick = mineCurrency,
                     enabled = !assets.isMine,
                     modifier = Modifier.padding(2.dp)
                 ) {
-                    Text("майнить 100 ${assets.cryptoAsset.symbol}")
+                    Text("майнить 100 ${asset.symbol}")
                 }
             }
         }
     }
+}

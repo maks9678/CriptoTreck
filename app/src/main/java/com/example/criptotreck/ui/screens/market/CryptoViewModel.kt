@@ -1,9 +1,10 @@
-package com.example.criptotreck.ui.theme.crypto
+package com.example.criptotreck.ui.screens.market
 
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.criptotreck.data.model.CryptoAsset
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -24,8 +25,7 @@ data class UiState(
     val listCrypto: List<CryptoAsset> = emptyList(),
     val isLoading: Boolean = true,
     val isLiveUpdateActive: Boolean = true,
-
-    )
+)
 
 @OptIn(FlowPreview::class)
 class CryptoViewModel : ViewModel() {
@@ -39,13 +39,12 @@ class CryptoViewModel : ViewModel() {
         val filterList = if (inputText.isBlank()) {
             state.listCrypto
         } else {
-            state.listCrypto.filter { crupto ->
-                crupto.name.contains(inputText, ignoreCase = true) ||
-                        crupto.symbol.contains(inputText, ignoreCase = true)
+            state.listCrypto.filter { crypto ->
+                crypto.name.contains(inputText, ignoreCase = true) ||
+                        crypto.symbol.contains(inputText, ignoreCase = true)
             }
         }
         state.copy(listCrypto = filterList)
-
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -53,7 +52,6 @@ class CryptoViewModel : ViewModel() {
     )
 
     init {
-        // Инициализируем стартовый список в _allCryptoState
         _allCryptoState.update {
             it.copy(
                 listCrypto = listOf(
@@ -76,12 +74,10 @@ class CryptoViewModel : ViewModel() {
             _allCryptoState.update { it.copy(listCrypto = mergedList, isLoading = false) }
             startLiveUpdates()
         }
-
     }
 
     fun toggleFavorite(assetId: String) {
         _allCryptoState.update { currentState ->
-            // 1. Создаём новый список, меняя флаг isFavorite у нужной монеты
             val updatedList = currentState.listCrypto.map { coin ->
                 if (coin.id == assetId) {
                     coin.copy(isFavorite = !coin.isFavorite)
@@ -89,16 +85,13 @@ class CryptoViewModel : ViewModel() {
                     coin
                 }
             }
-            // 2. Возвращаем копию всего UiState с обновлённым списком
             currentState.copy(listCrypto = updatedList)
         }
     }
 
     suspend fun loadMarketCoins(): List<CryptoAsset> {
         delay(2000.milliseconds)
-
         return ListCrypto.initialCryptoList
-
     }
 
     suspend fun loadUserFavorites(): Set<String> {
@@ -109,27 +102,18 @@ class CryptoViewModel : ViewModel() {
     private fun startLiveUpdates() {
         priceUpdateJob?.cancel()
         priceUpdateJob = viewModelScope.launch {
-            // Проверяем isActive вместо простого while(true),
-            // чтобы цикл гарантированно прервался при отмене корутины.
             while (isActive) {
-                // Ждём 3 секунды перед следующим обновлением.
-                // delay не блокирует главный поток, экран продолжает плавно работать.
                 delay(2000.milliseconds)
 
-                // Обновляем исходный список монет через потокобезопасный .update
                 _allCryptoState.update { currentState ->
                     val updatedList = currentState.listCrypto.map { coin ->
-                        // Генерируем случайное изменение цены от -2% до +2%
                         val changePercent = Random.nextDouble(-0.02, 0.02)
                         val newPrice = coin.currentPrice * (1.0 + changePercent)
 
-                        // Создаём копию монеты с новой ценой (округляем до 2 знаков)
                         coin.copy(
                             currentPrice = (newPrice * 100).toInt() / 100.0
                         )
                     }
-
-                    // Возвращаем обновлённый UiState с новым списком
                     currentState.copy(listCrypto = updatedList)
                 }
             }
@@ -146,13 +130,15 @@ class CryptoViewModel : ViewModel() {
         }
     }
 }
+
 object ListCrypto {
     val initialCryptoList = listOf(
-    CryptoAsset("1", "Bitcoin", "BTC", 92000.0, 2.5),
-    CryptoAsset("2", "Ethereum", "ETH", 3100.0, -3.8),
-    CryptoAsset("3", "Solana", "SOL", 210.0, 5.4))
+        CryptoAsset("1", "Bitcoin", "BTC", 92000.0, 2.5),
+        CryptoAsset("2", "Ethereum", "ETH", 3100.0, -3.8),
+        CryptoAsset("3", "Solana", "SOL", 210.0, 5.4)
+    )
 
-    fun getCryptoById(id:String): CryptoAsset?{
-        return initialCryptoList.find{it.id == id}
+    fun getCryptoById(id: String): CryptoAsset? {
+        return initialCryptoList.find { it.id == id }
     }
 }
