@@ -1,4 +1,4 @@
-package com.example.criptotreck.ui.theme.News
+package com.example.criptotreck.ui.screens.news
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,7 +40,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -48,15 +47,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-
-@Composable
-fun CategoryNews.getContainerColor(): Color {
-    return when (this) {
-        CategoryNews.BURSE -> Color(0xFF0878D5)  // Синий
-        CategoryNews.DEFI -> Color(0xFF53E11C)   // Фиолетовый
-        CategoryNews.SAFETY -> Color(0xFFFF0000) // Зеленый
-    }
-}
+import com.example.criptotreck.data.model.CategoryNews
+import com.example.criptotreck.data.model.News
+import com.example.criptotreck.data.model.Portfolio
 
 @Preview(showBackground = true)
 @Composable
@@ -73,20 +66,18 @@ fun NewsPreview() {
                 descriptionText = "Торговые объемы ETH на спотовых биржах выросли на 40% за последние сутки.",
                 categoryNews = CategoryNews.BURSE,
                 timePublication = "35 мин. назад"
-
             ),
             News(
                 titleText = "Как защитить сид-фразу от вредоносного ПО",
                 descriptionText = "Разбираем лучшие практики хранения ключей и настройки аппаратных кошельков.",
                 categoryNews = CategoryNews.SAFETY,
                 timePublication = "6 часов назад"
-            ),
+            )
         ),
         true,
-        SnackbarHostState(),
+        SnackbarHostState()
     )
 }
-
 
 @Composable
 fun NewsScreen() {
@@ -109,7 +100,7 @@ fun NewsScreen() {
         state.portfolio,
         state.listNews,
         state.isLoading,
-        snackbarHostState,
+        snackbarHostState
     )
 }
 
@@ -123,32 +114,32 @@ fun NewsScreenIternal(
     portfolio: Portfolio?,
     listNews: List<News>,
     isLoading: Boolean = false,
-    snackbarHostState: SnackbarHostState,
+    snackbarHostState: SnackbarHostState
 ) {
-    Scaffold(topBar = {
-        TopAppBar(
-            title = {
-                Text(
-                    text = "Аналитика и Новости",
-                    modifier = Modifier,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-            },
-            actions = {
-                IconButton(
-                    modifier = Modifier.padding(0.dp),
-                    onClick = { onRefreshClick() },
-                    content = {
-                        Icon(
-                            imageVector = Icons.Default.RestartAlt,
-                            contentDescription = "Обновить"
-                        )
-                    })
-            },
-        )
-    }, snackbarHost = { SnackbarHost(snackbarHostState) }
-
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Аналитика и Новости",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                },
+                actions = {
+                    IconButton(
+                        onClick = { onRefreshClick() },
+                        content = {
+                            Icon(
+                                imageVector = Icons.Default.RestartAlt,
+                                contentDescription = "Обновить"
+                            )
+                        }
+                    )
+                }
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         Column {
             Row(
@@ -180,13 +171,12 @@ fun NewsScreenIternal(
                             Icon(Icons.Default.Clear, contentDescription = "Очистить")
                         }
                     }
-                })
+                }
+            )
             val categories = listOf(null) + CategoryNews.entries
             LazyRow(
-                modifier = Modifier
-                    .padding()
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceAround,
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceAround
             ) {
                 items(categories) { category ->
                     FilterChip(
@@ -194,18 +184,18 @@ fun NewsScreenIternal(
                         onClick = { onCategoryClick(category) },
                         label = {
                             Text(
-                                text = category?.title ?: "Все",
+                                text = category?.title ?: "Все"
                             )
-                        })
+                        }
+                    )
                 }
-
             }
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
                 shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerLow // Или Color.White / surface
+                color = MaterialTheme.colorScheme.surfaceContainerLow
             ) {
                 if (isLoading) {
                     Box(
@@ -222,10 +212,11 @@ fun NewsScreenIternal(
                         modifier = Modifier
                             .padding(24.dp)
                             .fillMaxWidth(),
-                        verticalArrangement = Arrangement.SpaceBetween,
+                        verticalArrangement = Arrangement.SpaceBetween
                     ) {
                         itemsIndexed(
-                            items = listNews, key = { _, news -> news.idNews }) { index, news ->
+                            items = listNews, key = { _, news -> news.idNews }
+                        ) { index, news ->
                             CardNews(news = news)
                             if (index < listNews.lastIndex) {
                                 HorizontalDivider(
@@ -246,7 +237,7 @@ fun NewsScreenIternal(
 fun Element(
     modifier: Modifier,
     textName: String,
-    value: String,
+    value: String
 ) {
     Card(modifier = modifier.padding(12.dp)) {
         Column(modifier = Modifier.padding(16.dp)) {

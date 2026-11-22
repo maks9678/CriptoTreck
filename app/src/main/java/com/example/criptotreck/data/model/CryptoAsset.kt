@@ -1,4 +1,4 @@
-package com.example.criptotreck.ui.theme.crypto
+package com.example.criptotreck.data.model
 
 data class CryptoAsset(
     val id: String,
