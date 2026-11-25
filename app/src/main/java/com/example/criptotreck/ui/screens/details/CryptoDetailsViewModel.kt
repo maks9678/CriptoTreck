@@ -5,17 +5,21 @@ import androidx.lifecycle.viewModelScope
 import com.example.criptotreck.data.model.CryptoAsset
 import com.example.criptotreck.data.model.ListCrypto
 import com.example.criptotreck.data.repository.BinanceRepository
+import com.example.criptotreck.ui.screens.demo.ChartPoint
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
 import kotlin.time.Duration.Companion.milliseconds
 
 data class CryptoDetailsState(
     val cryptoAsset: CryptoAsset? = null,
+    val chartPoints: List<ChartPoint> = emptyList(),
     val currentBalance: Double = 0.0,
     val isMine: Boolean = false,
     val isLoading: Boolean = true,
@@ -45,39 +49,68 @@ class CryptoDetailsViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            // 1. Проверяем локальный список
-            val localAsset = ListCrypto.getCryptoById(idCrypto)
-            if (localAsset != null) {
-                _uiState.update { it.copy(cryptoAsset = localAsset, isLoading = false) }
-                startLiveUpdates(localAsset.symbol)
-                return@launch
-            }
+            supervisorScope {
+                // Параллельно запрашиваем детали монеты и исторический график с Binance API
+                val historicalChartDeferred = async { binanceRepository.getHistoricalChart(idCrypto) }
+                val marketCoinsResult = binanceRepository.getMarketCoins()
 
-            // 2. Если нет в локальном списке, запрашиваем актуальные данные с Binance API
-            val result = binanceRepository.getMarketCoins()
-            result.onSuccess { coins ->
-                val foundCoin = coins.find { (symbol, baseAsset) ->
-                    symbol.equals(idCrypto, ignoreCase = true) || baseAsset.equals(idCrypto, ignoreCase = true)
+                val chartPoints = historicalChartDeferred.await().getOrDefault(emptyList())
+
+                val localAsset = ListCrypto.getCryptoById(idCrypto)
+                if (localAsset != null) {
+                    _uiState.update {
+                        it.copy(
+                            cryptoAsset = localAsset,
+                            chartPoints = chartPoints.takeIf { pts -> pts.isNotEmpty() } ?: it.chartPoints,
+                            isLoading = false,
+                        )
+                    }
+                    startLiveUpdates(localAsset.symbol)
+                    return@supervisorScope
                 }
-                if (foundCoin != null) {
-                    val asset = CryptoAsset(
-                        id = foundCoin.symbol,
-                        name = foundCoin.baseAsset,
-                        symbol = foundCoin.baseAsset,
-                        currentPrice = foundCoin.currentPrice,
-                        priceChange24h = foundCoin.changePercent24h,
-                    )
-                    _uiState.update { it.copy(cryptoAsset = asset, isLoading = false) }
-                    startLiveUpdates(asset.symbol)
-                } else {
+
+                marketCoinsResult.onSuccess { coins ->
+                    val foundCoin = coins.find { (symbol, baseAsset) ->
+                        symbol.equals(idCrypto, ignoreCase = true) || baseAsset.equals(idCrypto, ignoreCase = true)
+                    }
+                    if (foundCoin != null) {
+                        val asset = CryptoAsset(
+                            id = foundCoin.symbol,
+                            name = foundCoin.baseAsset,
+                            symbol = foundCoin.baseAsset,
+                            currentPrice = foundCoin.currentPrice,
+                            priceChange24h = foundCoin.changePercent24h,
+                        )
+                        _uiState.update {
+                            it.copy(
+                                cryptoAsset = asset,
+                                chartPoints = chartPoints.takeIf { pts -> pts.isNotEmpty() } ?: it.chartPoints,
+                                isLoading = false,
+                            )
+                        }
+                        startLiveUpdates(asset.symbol)
+                    } else {
+                        val defaultAsset = CryptoAsset(idCrypto, idCrypto, idCrypto, 100.0, 0.0)
+                        _uiState.update {
+                            it.copy(
+                                cryptoAsset = defaultAsset,
+                                chartPoints = chartPoints.takeIf { pts -> pts.isNotEmpty() } ?: it.chartPoints,
+                                isLoading = false,
+                            )
+                        }
+                        startLiveUpdates(idCrypto)
+                    }
+                }.onFailure {
                     val defaultAsset = CryptoAsset(idCrypto, idCrypto, idCrypto, 100.0, 0.0)
-                    _uiState.update { it.copy(cryptoAsset = defaultAsset, isLoading = false) }
+                    _uiState.update {
+                        it.copy(
+                            cryptoAsset = defaultAsset,
+                            chartPoints = chartPoints.takeIf { pts -> pts.isNotEmpty() } ?: it.chartPoints,
+                            isLoading = false,
+                        )
+                    }
                     startLiveUpdates(idCrypto)
                 }
-            }.onFailure {
-                val defaultAsset = CryptoAsset(idCrypto, idCrypto, idCrypto, 100.0, 0.0)
-                _uiState.update { it.copy(cryptoAsset = defaultAsset, isLoading = false) }
-                startLiveUpdates(idCrypto)
             }
         }
     }

@@ -192,16 +192,26 @@ fun InteractiveCryptoChartScreen(
     modifier: Modifier = Modifier,
     coinSymbol: String = "BTC",
     basePrice: Float = 92000f,
-    initialPriceChange: Float = 2.5f
+    initialPriceChange: Float = 2.5f,
+    initialChartPoints: List<ChartPoint>? = null
 ) {
     var selectedTimeFrame by remember { mutableStateOf(TimeFrame.WEEK_1) }
     var chartType by remember { mutableStateOf(ChartType.LINE) }
     var showMA20 by remember { mutableStateOf(true) }
     var showVolume by remember { mutableStateOf(true) }
 
-    // Данные графика с учетом базовой цены конкретной монеты
-    var chartData by remember(selectedTimeFrame, coinSymbol) {
-        mutableStateOf(ChartDataGenerator.generateData(selectedTimeFrame, basePrice))
+    // Данные графика: если переданы реальные исторические точки с Binance, используем их
+    var chartData by remember(coinSymbol, initialChartPoints) {
+        mutableStateOf(
+            initialChartPoints?.takeIf { it.isNotEmpty() }
+                ?: ChartDataGenerator.generateData(selectedTimeFrame, basePrice)
+        )
+    }
+
+    LaunchedEffect(selectedTimeFrame) {
+        if (initialChartPoints.isNullOrEmpty()) {
+            chartData = ChartDataGenerator.generateData(selectedTimeFrame, basePrice)
+        }
     }
 
     // Скользящее окно в реальном времени при изменении цены (добавление новой точки справа, удаление старой слева)

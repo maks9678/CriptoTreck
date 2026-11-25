@@ -141,7 +141,7 @@ fun CryptoDetailsIternal(
                         MiningControlButton(coinTicker = symbol)
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // Интерактивный график, настроенный под конкретную валюту
+                        // Интерактивный график с реальными историческими данными с Binance API
                         InteractiveCryptoChartScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -149,6 +149,7 @@ fun CryptoDetailsIternal(
                             coinSymbol = symbol,
                             basePrice = currentPrice.toFloat(),
                             initialPriceChange = priceChange24h.toFloat(),
+                            initialChartPoints = assets.chartPoints,
                         )
                     }
                 }

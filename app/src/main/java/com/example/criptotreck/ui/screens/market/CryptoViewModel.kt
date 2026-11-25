@@ -1,5 +1,6 @@
 package com.example.criptotreck.ui.screens.market
 
+import android.util.Log
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
@@ -58,6 +59,8 @@ class CryptoViewModel(
         viewModelScope.launch {
             _marketState.update { it.copy(isLoading = true, errorMessage = null) }
             val result = binanceRepository.getMarketCoins()
+
+            Log.i("CryptoViewModel","${result.isSuccess}")
             result.fold(
                 onSuccess = { coins ->
                     _marketState.update { it.copy(listCoins = coins, isLoading = false) }
