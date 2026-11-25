@@ -2,6 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -11,6 +16,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.CriptoTreck">
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -19,10 +25,48 @@
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-    </application>
 
+        <activity
+            android:name=".ui.screens.demo.ComposeActivity"
+            android:exported="false"
+            android:label="Compose Activity"
+            android:theme="@style/Theme.CriptoTreck" />
+
+        <activity
+            android:name=".ui.screens.demo.HybridActivity"
+            android:exported="false"
+            android:label="Hybrid Activity (XML + Compose)"
+            android:theme="@style/Theme.CriptoTreck" />
+
+        <activity
+            android:name=".ui.screens.demo.XmlActivity"
+            android:exported="false"
+            android:label="XML Activity"
+            android:theme="@style/Theme.CriptoTreck" />
+
+        <activity
+            android:name=".ui.screens.details.CryptoDetailActivity"
+            android:exported="false"
+            android:label="Crypto Detail Activity"
+            android:theme="@style/Theme.CriptoTreck" />
+
+        <service
+            android:name=".data.service.MiningService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Crypto mining simulation in background" />
+        </service>
+
+        <service
+            android:name=".data.service.PriceTrackerService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+        </service>
+
+    </application>
 </manifest>

@@ -3,10 +3,10 @@ package com.example.criptotreck
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -24,20 +24,20 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.example.criptotreck.navigation.CryptoDetailRoute
+import com.example.criptotreck.navigation.CryptoRoute
+import com.example.criptotreck.navigation.DemoRoute
+import com.example.criptotreck.navigation.NewsListRoute
+import com.example.criptotreck.ui.screens.demo.DemoScreen
+import com.example.criptotreck.ui.screens.details.CryptoDetailsScreen
+import com.example.criptotreck.ui.screens.market.CryptoScreen
+import com.example.criptotreck.ui.screens.news.NewsScreen
 import com.example.criptotreck.ui.theme.CriptoTreckTheme
-import com.example.criptotreck.ui.theme.CryptoRoute
-import com.example.criptotreck.ui.theme.News.NewsScreen
-import com.example.criptotreck.ui.theme.CryptoDetailRoute
-import com.example.criptotreck.ui.theme.NewsListRoute
-import com.example.criptotreck.ui.theme.crypto.CryptoScreen
-import com.example.criptotreck.ui.theme.cryptoDetails.CryptoDetailsScreen
 
 class MainActivity : ComponentActivity() {
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContent {
             val navController = rememberNavController()
             val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -66,10 +66,19 @@ class MainActivity : ComponentActivity() {
                             icon = { Icon(Icons.AutoMirrored.Filled.ShowChart, contentDescription = "Рынок") },
                             label = { Text("Рынок") }
                         )
+                        NavigationBarItem(
+                            selected = currentDestination?.hasRoute<DemoRoute>() == true,
+                            onClick = {
+                                navController.navigate(DemoRoute) {
+                                    launchSingleTop = true
+                                }
+                            },
+                            icon = { Icon(Icons.Default.Apps, contentDescription = "Демо") },
+                            label = { Text("Демо") }
+                        )
                     }
                 }
-            )
-            { paddingValues ->
+            ) { paddingValues ->
                 NavHost(
                     navController = navController,
                     startDestination = NewsListRoute,
@@ -82,38 +91,36 @@ class MainActivity : ComponentActivity() {
                         CryptoScreen(
                             onCryptoClick = { id ->
                                 navController.navigate(
-                                    CryptoDetailRoute(
-                                        id
-                                    )
+                                    CryptoDetailRoute(id)
                                 )
                             }
                         )
                     }
                     composable<CryptoDetailRoute> { backStackEntry ->
-                        // Достаем переданный объект с аргументами
                         val route: CryptoDetailRoute = backStackEntry.toRoute()
 
                         CryptoDetailsScreen(
                             idCrypto = route.id,
                             onBackClick = {
-                                if(backStackEntry.lifecycle.currentState == Lifecycle.State.RESUMED)
-                                navController.popBackStack()
-                            })
+                                if (backStackEntry.lifecycle.currentState == Lifecycle.State.RESUMED) {
+                                    navController.popBackStack()
+                                }
+                            }
+                        )
                     }
-
+                    composable<DemoRoute> {
+                        DemoScreen()
+                    }
                 }
             }
         }
-
     }
 }
-
 
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
     CriptoTreckTheme {
-        CryptoScreen{}
-
+        CryptoScreen {}
     }
 }
